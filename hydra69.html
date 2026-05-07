@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYDRA69 - Hacking Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=VT323&display=swap');
+
+:root {
+  --green:#00ff41; --gdim:#00aa2a; --gdark:#003b0f;
+  --bg:#000; --bg2:#030f03;
+  --red:#ff0033; --cyan:#00ffff; --yellow:#ffff00; --orange:#ff8800;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background:var(--bg); color:var(--green);
+  font-family:'Share Tech Mono',monospace;
+  height:100vh; overflow:hidden; cursor:crosshair;
+}
+
+#matrix{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.12;pointer-events:none;}
+
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,.014) 2px,rgba(0,255,65,.014) 4px);
+  pointer-events:none;z-index:9999;
+}
+body::after{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.7) 100%);
+  pointer-events:none;z-index:9998;animation:flicker 9s infinite;
+}
+@keyframes flicker{0%,93%,100%{opacity:1}94%{opacity:.82}95%{opacity:1}97%{opacity:.9}98%{opacity:1}}
+
+/* APP SHELL */
+.app{position:relative;z-index:10;height:100vh;display:flex;flex-direction:column;}
+
+/* HEADER */
+header{
+  flex-shrink:0;border-bottom:1px solid var(--gdim);
+  padding:8px 20px;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,18,0,.93);
+}
+.logo{
+  font-family:'Orbitron',monospace;font-size:26px;font-weight:900;letter-spacing:6px;
+  color:var(--green);animation:logopulse 2.5s ease-in-out infinite,glitch 7s infinite;
+}
+.logo em{color:var(--red);font-style:normal;}
+@keyframes logopulse{0%,100%{text-shadow:0 0 8px var(--green),0 0 22px var(--gdim)}50%{text-shadow:0 0 18px var(--green),0 0 55px var(--green)}}
+@keyframes glitch{0%,88%,100%{transform:translate(0)}89%{transform:translate(-2px,0);text-shadow:-2px 0 var(--red),2px 0 var(--cyan)}91%{transform:translate(2px,0)}93%{transform:translate(0)}}
+
+.hdr-right{text-align:right;font-size:11px;color:var(--gdim);line-height:1.9;}
+.hdr-right b{color:var(--green);font-weight:normal;}
+.live{color:var(--red);animation:blink 1s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.status-row{display:flex;gap:18px;font-size:11px;color:var(--gdim);margin-top:2px;}
+.status-row b{color:var(--green);font-weight:normal;}
+
+/* BODY */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:255px 1fr;}
+
+/* SIDEBAR */
+.sidebar{
+  border-right:1px solid var(--gdark);background:rgba(0,8,0,.93);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.sb-head{
+  font-family:'Orbitron',monospace;font-size:9px;letter-spacing:3px;
+  color:var(--gdim);padding:14px 18px 12px;border-bottom:1px solid var(--gdark);
+}
+.sbtn{
+  display:flex;align-items:center;gap:11px;padding:14px 18px;
+  background:transparent;border:none;border-left:3px solid transparent;
+  color:var(--gdim);font-family:'Share Tech Mono',monospace;font-size:13px;
+  text-align:left;width:100%;cursor:pointer;letter-spacing:1px;transition:all .15s;
+}
+.sbtn:hover{background:rgba(0,255,65,.06);color:var(--green);border-left-color:var(--gdim);}
+.sbtn.active{background:rgba(0,255,65,.11);color:var(--green);border-left-color:var(--green);}
+.sbtn.kbtn{border-top:1px solid var(--gdark);margin-top:auto;}
+.sbtn.kbtn:hover,.sbtn.kbtn.active{color:#ff4455;border-left-color:var(--red);background:rgba(255,0,51,.07);}
+.sicon{font-size:18px;width:26px;text-align:center;}
+.slabel{flex:1;}
+.stag{font-size:9px;padding:1px 5px;background:rgba(0,255,65,.07);border:1px solid var(--gdark);color:var(--gdark);border-radius:2px;}
+.sbtn.active .stag{color:var(--green);border-color:var(--gdim);}
+
+.sb-stats{padding:12px 18px;font-size:10px;color:var(--gdim);line-height:2.1;border-top:1px solid var(--gdark);}
+.sv{color:var(--green);float:right;}
+
+/* PANEL */
+.panel{display:flex;flex-direction:column;background:var(--bg2);min-height:0;}
+
+.pbar{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:9px 18px;background:rgba(0,255,65,.05);border-bottom:1px solid var(--gdark);
+}
+.pdots{display:flex;gap:6px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.dot.r{background:#ff5f57;box-shadow:0 0 5px #ff5f57;}
+.dot.y{background:#febc2e;box-shadow:0 0 5px #febc2e;}
+.dot.g{background:#28c840;box-shadow:0 0 5px #28c840;}
+.ptitle{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:2px;color:var(--green);}
+.pstatus{font-size:10px;color:var(--gdim);}
+
+/* TERMINAL */
+.terminal{
+  flex:1;min-height:0;padding:16px 20px;overflow-y:auto;
+  font-family:'VT323',monospace;font-size:17px;line-height:1.55;
+  scrollbar-width:thin;scrollbar-color:var(--gdark) transparent;
+}
+.terminal::-webkit-scrollbar{width:3px;}
+.terminal::-webkit-scrollbar-thumb{background:var(--gdark);}
+
+.welcome{text-align:center;padding:28px 20px;}
+.welcome pre{font-family:'VT323',monospace;font-size:13px;color:var(--gdim);line-height:1.15;margin-bottom:22px;}
+.welcome h2{font-family:'Orbitron',monospace;font-size:20px;letter-spacing:4px;margin-bottom:8px;text-shadow:0 0 14px var(--green);}
+.welcome p{color:var(--gdim);font-size:14px;letter-spacing:1px;}
+
+.tl{display:block;word-break:break-all;}
+.tl.dim   {color:var(--gdim);}
+.tl.bright{color:var(--green);text-shadow:0 0 6px var(--green);}
+.tl.red   {color:var(--red);text-shadow:0 0 5px var(--red);}
+.tl.cyan  {color:var(--cyan);}
+.tl.yellow{color:var(--yellow);}
+.tl.orange{color:var(--orange);}
+.tl.ok    {color:#00ff88;text-shadow:0 0 10px #00ff88;font-size:19px;}
+
+.prog-wrap{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.prog-bg{flex:1;height:13px;background:rgba(0,255,65,.07);border:1px solid var(--gdark);overflow:hidden;}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gdark),var(--green));box-shadow:0 0 8px var(--green);}
+.prog-pct{font-size:13px;color:var(--green);min-width:36px;}
+
+/* BUTTON AREA */
+.btn-area{
+  flex-shrink:0;padding:10px 18px;
+  display:none;gap:10px;align-items:center;
+  border-top:1px solid var(--gdark);background:rgba(0,12,0,.85);
+}
+.abtn{
+  padding:11px 26px;background:transparent;
+  font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px;
+  cursor:pointer;border:1px solid var(--green);color:var(--green);
+  position:relative;overflow:hidden;transition:all .2s;
+  box-shadow:0 0 8px rgba(0,255,65,.15);
+}
+.abtn:hover{background:rgba(0,255,65,.1);box-shadow:0 0 18px rgba(0,255,65,.4);text-shadow:0 0 8px var(--green);}
+.abtn:disabled{border-color:var(--gdark);color:var(--gdark);cursor:not-allowed;box-shadow:none;}
+.abtn.kill-style{border-color:var(--red);color:var(--red);}
+.abtn.kill-style:hover{background:rgba(255,0,51,.1);}
+.abort-pulse{animation:apulse .85s ease-in-out infinite;}
+@keyframes apulse{0%,100%{box-shadow:0 0 8px rgba(255,0,51,.3)}50%{box-shadow:0 0 22px rgba(255,0,51,.85)}}
+
+/* INPUT BAR */
+.ibar{
+  flex-shrink:0;display:flex;align-items:center;gap:8px;
+  padding:9px 18px;border-top:1px solid var(--gdark);background:rgba(0,14,0,.88);
+}
+.iprompt{color:var(--green);font-size:13px;white-space:nowrap;}
+.ifield{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--green);font-family:'Share Tech Mono',monospace;font-size:13px;
+  caret-color:var(--green);
+}
+.icursor{width:8px;height:13px;background:var(--green);animation:blink .7s step-end infinite;flex-shrink:0;}
+
+@media(max-width:640px){
+  .body{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+  .sidebar{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--gdark);}
+  .sb-head,.sb-stats{display:none;}
+  .sbtn{flex:1;min-width:90px;padding:10px 8px;font-size:11px;}
+  .sbtn.kbtn{margin-top:0;border-top:none;}
+  .logo{font-size:18px;}
+  .welcome pre{display:none;}
+}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="logo">HYDRA<em>69</em></div>
+      <div class="status-row">
+        <span>VER:<b>2.4.1</b></span>
+        <span>NODE:<b>0x4F2A</b></span>
+        <span>UP:<b id="h-up">00:00:00</b></span>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div><span class="live">● LIVE</span> &nbsp;SECURE CHANNEL</div>
+      <div>IP: <b id="h-ip">192.168.0.1</b></div>
+      <div>PROXY:<b>ON</b> &nbsp;|&nbsp; TOR:<b>ON</b></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="sidebar">
+      <div class="sb-head">// SELECT TARGET //</div>
+      <button class="sbtn" id="btn-phone"     onclick="selectMode('phone')">
+        <span class="sicon">📱</span><span class="slabel">HACK PHONE</span><span class="stag">v4.2</span>
+      </button>
+      <button class="sbtn" id="btn-wifi"      onclick="selectMode('wifi')">
+        <span class="sicon">📡</span><span class="slabel">HACK WiFi</span><span class="stag">v3.9</span>
+      </button>
+      <button class="sbtn" id="btn-cctv"      onclick="selectMode('cctv')">
+        <span class="sicon">📷</span><span class="slabel">HACK CCTV</span><span class="stag">v2.1</span>
+      </button>
+      <button class="sbtn" id="btn-satellite" onclick="selectMode('satellite')">
+        <span class="sicon">🛰️</span><span class="slabel">HACK SATELLITE</span><span class="stag">v1.7</span>
+      </button>
+      <button class="sbtn kbtn" id="btn-kill" onclick="selectMode('kill')">
+        <span class="sicon">💀</span><span class="slabel">KILL</span>
+        <span class="stag" style="border-color:#ff0033;color:#ff4455;">AUTO</span>
+      </button>
+      <div class="sb-stats">
+        <div>SESSIONS <span class="sv" id="st-s">0</span></div>
+        <div>TARGETS  <span class="sv" id="st-t">0</span></div>
+        <div>EXFIL    <span class="sv" id="st-d">0 MB</span></div>
+        <div>ENCRYPT  <span class="sv" style="color:var(--green)">AES-256</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="pbar">
+        <div class="pdots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+        <div class="ptitle" id="ptitle">HYDRA69 // TERMINAL</div>
+        <div class="pstatus" id="pstatus">IDLE</div>
+      </div>
+
+      <div class="terminal" id="terminal">
+        <div class="welcome">
+          <pre>
+  ██╗  ██╗██╗   ██╗██████╗ ██████╗  █████╗ ██╗
+  ██║  ██║╚██╗ ██╔╝██╔══██╗██╔══██╗██╔══██╗██║
+  ███████║ ╚████╔╝ ██║  ██║██████╔╝███████║██║
+  ██╔══██║  ╚██╔╝  ██║  ██║██╔══██╗██╔══██║╚═╝
+  ██║  ██║   ██║   ██████╔╝██║  ██║██║  ██║██╗
+  ╚═╝  ╚═╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝</pre>
+          <h2>SELECT A TARGET</h2>
+          <p>Choose an attack vector from the sidebar.</p>
+        </div>
+      </div>
+
+      <div class="btn-area" id="btn-area">
+        <button class="abtn" id="launch-btn" onclick="startHack()">▶ &nbsp;INITIATE HACK SEQUENCE</button>
+        <button class="abtn kill-style abort-pulse" id="abort-btn" onclick="abortKill()" style="display:none">■ &nbsp;ABORT</button>
+      </div>
+
+      <div class="ibar">
+        <span class="iprompt">root@hydra69:~$</span>
+        <input class="ifield" id="cmd-input" type="text" placeholder="type a command and press Enter..." autocomplete="off" spellcheck="false"/>
+        <div class="icursor"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* MATRIX RAIN */
+(function(){
+  const cv=document.getElementById('matrix'),ctx=cv.getContext('2d');
+  const chars='アイウエオカキクケコ0123456789ABCDEF<>{}|/\\~@#$%';
+  let drops=[];
+  function resize(){cv.width=innerWidth;cv.height=innerHeight;drops=Array(Math.floor(innerWidth/16)).fill(1);}
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,0.05)';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#00ff41';ctx.font='13px Share Tech Mono';
+    drops.forEach((y,i)=>{
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*16,y*16);
+      if(y*16>cv.height&&Math.random()>.975)drops[i]=0; drops[i]++;
+    });
+  }
+  resize();setInterval(draw,50);addEventListener('resize',resize);
+})();
+
+/* FAKE IP + UPTIME */
+setInterval(()=>{
+  const r=()=>Math.floor(Math.random()*254+1);
+  document.getElementById('h-ip').textContent=`${r()}.${r()}.${r()}.${r()}`;
+},3500);
+let upS=0;
+setInterval(()=>{
+  upS++;
+  const h=String(Math.floor(upS/3600)).padStart(2,'0'),
+        m=String(Math.floor((upS%3600)/60)).padStart(2,'0'),
+        s=String(upS%60).padStart(2,'0');
+  document.getElementById('h-up').textContent=`${h}:${m}:${s}`;
+},1000);
+
+/* MODULE SEQUENCES */
+const MOD={
+  phone:{title:'PHONE HACK // MODULE',seq:[
+    {c:'dim',   t:'[INIT] Loading PhoneExploit framework v4.2...'},
+    {c:'dim',   t:'[INIT] Injecting SS7 protocol interceptor...'},
+    {c:'bright',t:'[SCAN] Broadcasting probe on GSM 850/1900 MHz...'},
+    {c:'dim',   t:'[SCAN] Triangulating via cell tower IDs...'},
+    {c:'cyan',  t:'[SCAN] Detected 47 devices in range'},
+    {c:'yellow',t:'[LOCK] Target acquired: IMEI 35492710XXXXXXX'},
+    {c:'dim',   t:'[EXPL] Deploying CVE-2024-3829 zero-day exploit...'},
+    {c:'dim',   t:'[EXPL] Bypassing Android security patch 2024.09...'},
+    {c:'bright',t:'[PROC] Injecting payload into telephony daemon...'},
+    {c:'dim',   t:'[MEM]  Heap alloc: 0x7FFF4200 → 0x7FFF8400'},
+    {c:'dim',   t:'[SYS]  Privilege escalation: user → root ✓'},
+    {c:'cyan',  t:'[DATA] Extracting contacts (312 records)...'},
+    {c:'cyan',  t:'[DATA] Cloning SMS threads (1,847 messages)...'},
+    {c:'cyan',  t:'[DATA] Pulling GPS history — last 90 days...'},
+    {c:'orange',t:'[CAM]  Background camera access enabled...'},
+    {c:'orange',t:'[MIC]  Covert microphone tap activated...'},
+    {c:'dim',   t:'[HIDE] Purging system logs...'},
+    {c:'dim',   t:'[EXFL] Exfiltrating via encrypted tunnel...'},
+    {c:'ok',    t:'[ ✓ ] PHONE COMPROMISED — FULL ACCESS GRANTED'},
+  ]},
+  wifi:{title:'WiFi HACK // MODULE',seq:[
+    {c:'dim',   t:'[INIT] Launching AirCrack-NG 1.7.0...'},
+    {c:'dim',   t:'[INIT] Setting wlan0 to monitor mode...'},
+    {c:'bright',t:'[SCAN] Sweeping 2.4 GHz + 5 GHz bands...'},
+    {c:'dim',   t:'[SCAN] Capturing beacon frames...'},
+    {c:'cyan',  t:'[NETS] 23 access points found in range'},
+    {c:'yellow',t:'[TARG] "HomeNetwork_5G" | BSSID: C4:E9:84:XX:XX | CH:149'},
+    {c:'bright',t:'[ATCK] Sending 64 deauth frames to all clients...'},
+    {c:'dim',   t:'[WAIT] Capturing 4-way WPA3 handshake...'},
+    {c:'dim',   t:'[HAND] Handshake captured! Saving .pcap...'},
+    {c:'dim',   t:'[DICT] Loading rockyou2024.txt (12.8M entries)...'},
+    {c:'dim',   t:'[BRUT] GPU rate: 847,293 PMK/s'},
+    {c:'orange',t:'[CRCK] Running PMKID offline attack...'},
+    {c:'yellow',t:'[CRCK] 47% complete...'},
+    {c:'bright',t:'[CRCK] Password cracked!'},
+    {c:'cyan',  t:'[CONN] Joining network with stolen credentials...'},
+    {c:'dim',   t:'[MITM] ARP poisoning all LAN clients...'},
+    {c:'dim',   t:'[SNIF] Sniffing unencrypted HTTP traffic...'},
+    {c:'ok',    t:'[ ✓ ] WiFi PWNED — TRAFFIC INTERCEPTED'},
+  ]},
+  cctv:{title:'CCTV HACK // MODULE',seq:[
+    {c:'dim',   t:'[INIT] Loading Shodan API module...'},
+    {c:'dim',   t:'[INIT] Initializing RTSP stream exploiter...'},
+    {c:'bright',t:'[SCAN] Querying: port:554 has_screenshot:true...'},
+    {c:'cyan',  t:'[HITS] 1,283 exposed cameras found in region'},
+    {c:'yellow',t:'[TARG] Probing default credentials...'},
+    {c:'dim',   t:'[TRY]  admin:admin  →  FAIL'},
+    {c:'dim',   t:'[TRY]  admin:12345  →  FAIL'},
+    {c:'dim',   t:'[TRY]  root:toor    →  SUCCESS ✓'},
+    {c:'bright',t:'[RTSP] Connecting: rtsp://192.168.x.x:554/stream1'},
+    {c:'dim',   t:'[RTSP] Codec: H.264 1080p @ 30fps'},
+    {c:'cyan',  t:'[LIVE] Live feed streaming...'},
+    {c:'dim',   t:'[ARCH] Accessing DVR archive...'},
+    {c:'dim',   t:'[ARCH] Downloading last 30 days of footage...'},
+    {c:'orange',t:'[CTRL] Hijacking PTZ pan/tilt/zoom controls...'},
+    {c:'dim',   t:'[HIDE] Looping 30s idle clip to monitors...'},
+    {c:'dim',   t:'[BACK] Persistent backdoor installed...'},
+    {c:'ok',    t:'[ ✓ ] CCTV OWNED — 47 CAMERAS COMPROMISED'},
+  ]},
+  satellite:{title:'SATELLITE HACK // MODULE',seq:[
+    {c:'dim',   t:'[INIT] Booting SatHijack v1.7...'},
+    {c:'dim',   t:'[INIT] Aligning dish to orbital slot 72.5°E...'},
+    {c:'bright',t:'[SCAN] Sweeping Ku-band 10.7–12.75 GHz...'},
+    {c:'dim',   t:'[SCAN] Detecting DVB-S2 downlink signals...'},
+    {c:'cyan',  t:'[INFO] Identified: INTELSAT IS-17 | Alt: 35,786 km'},
+    {c:'yellow',t:'[LOCK] Uplink carrier lock at 14.25 GHz'},
+    {c:'dim',   t:'[AUTH] Replaying TLE authentication tokens...'},
+    {c:'bright',t:'[EXPL] Injecting spoofed telecommand frames...'},
+    {c:'dim',   t:'[CTRL] Overriding ground station authority...'},
+    {c:'orange',t:'[WARN] Attitude control system responding...'},
+    {c:'cyan',  t:'[DATA] Intercepting encrypted comms payload...'},
+    {c:'dim',   t:'[DCRP] Key recovered: A3 F2 9C 11 7E 04 B8 D2'},
+    {c:'dim',   t:'[STRM] Decoding 12 active transponder channels...'},
+    {c:'orange',t:'[UPDT] Uploading modified firmware to OBC...'},
+    {c:'dim',   t:'[PERS] Backdoor beacon on 437.525 MHz installed...'},
+    {c:'ok',    t:'[ ✓ ] SATELLITE SEIZED — ORBITAL CONTROL GRANTED'},
+  ]}
+};
+
+const KILL_CMDS=[
+  {c:'red',   t:'[KILL] Scorched-earth protocol engaged...'},
+  {c:'dim',   t:'[SYS]  rm -rf /var/log/* --no-preserve-root'},
+  {c:'dim',   t:'[SYS]  shred -vfz -n 7 /etc/passwd'},
+  {c:'orange',t:'[MEM]  Overwriting RAM sectors 0x0000–0xFFFF...'},
+  {c:'dim',   t:'[NET]  Flooding 10.0.0.1 with 65535-byte ICMP...'},
+  {c:'dim',   t:'[SYS]  kill -9 $(ps aux | awk \'{print $2}\')'},
+  {c:'red',   t:'[WARN] CPU at 104°C — thermal throttle bypassed'},
+  {c:'dim',   t:'[FS]   Corrupting MBR sectors 0–63...'},
+  {c:'cyan',  t:'[NET]  SYN flood: 14,829,312 pkt/s'},
+  {c:'dim',   t:'[SYS]  dd if=/dev/urandom of=/dev/sda bs=4M'},
+  {c:'red',   t:'[CRIT] Kernel panic imminent — watchdog disabled'},
+  {c:'dim',   t:'[NET]  ARP table poisoned on all LAN nodes...'},
+  {c:'dim',   t:'[SYS]  chmod 000 /bin /sbin /usr/bin'},
+  {c:'cyan',  t:'[EXFL] Tunneling 47.3 GB via DNS covert channel...'},
+  {c:'dim',   t:'[SYS]  iptables -F && iptables -X && iptables -Z'},
+  {c:'orange',t:'[BIOS] Flashing corrupted UEFI firmware...'},
+  {c:'red',   t:'[WARN] Disk: 98% sectors flagged bad'},
+  {c:'dim',   t:'[NET]  RST packets injected into all TCP sessions...'},
+  {c:'dim',   t:'[SYS]  cryptsetup luksErase /dev/sda --batch-mode'},
+  {c:'cyan',  t:'[MEM]  Heap spray: 0x41414141 x 1M'},
+  {c:'orange',t:'[HW]   Fan controller offline — passive cooling only'},
+  {c:'dim',   t:'[NET]  BGP hijack: announcing 0.0.0.0/0 to peers...'},
+  {c:'red',   t:'[CRIT] /boot partition wiped. No recovery path.'},
+  {c:'dim',   t:'[SYS]  unlink /lib/x86_64-linux-gnu/libc.so.6'},
+  {c:'orange',t:'[BIOS] Secure boot revoked. TPM cleared.'},
+  {c:'red',   t:'[CRIT] PRNG seeded 0x0 — entropy destroyed'},
+  {c:'dim',   t:'[NET]  DNS poison: google.com → 10.66.6.6'},
+  {c:'dim',   t:'[SYS]  wipe -rfi /home/* /root/*'},
+  {c:'red',   t:'[WARN] Rootkit confirmed in ring-0'},
+  {c:'dim',   t:'[NET]  VLAN hopping on 802.1Q trunk port...'},
+];
+
+/* STATE */
+let mode=null, running=false, killTimer=null, killStopped=false;
+let ss=0,st=0,sd=0;
+
+/* HELPERS */
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+function addLine(text,cls){
+  const t=$('terminal');
+  const d=document.createElement('span');
+  d.className='tl '+(cls||'dim');
+  d.textContent=text;
+  t.appendChild(d);
+  t.scrollTop=t.scrollHeight;
+}
+
+function addProgressBar(){
+  const t=$('terminal');
+  const w=document.createElement('div');
+  w.className='prog-wrap';
+  w.innerHTML='<span class="tl dim" style="min-width:115px">[PROGRESS]</span><div class="prog-bg"><div class="prog-fill" id="pfill"></div></div><span class="prog-pct" id="ppct">0%</span>';
+  t.appendChild(w);
+  t.scrollTop=t.scrollHeight;
+}
+
+async function animProgress(){
+  return new Promise(res=>{
+    let p=0;
+    const iv=setInterval(()=>{
+      p+=Math.random()*4+0.8;
+      if(p>=100){p=100;clearInterval(iv);res();}
+      const f=$('pfill'),l=$('ppct');
+      if(f)f.style.width=p+'%';
+      if(l)l.textContent=Math.floor(p)+'%';
+    },55);
+  });
+}
+
+function randomHex(){
+  let s='  ';
+  for(let i=0;i<8;i++)s+=Math.floor(Math.random()*0xFFFF).toString(16).toUpperCase().padStart(4,'0')+' ';
+  return s;
+}
+
+/* SELECT MODE */
+function selectMode(m){
+  if(running)return;
+  mode=m;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
+  $('btn-'+m).classList.add('active');
+
+  // Show button area
+  $('btn-area').style.display='flex';
+
+  const lb=$('launch-btn'), ab=$('abort-btn');
+  lb.style.display='inline-block'; lb.disabled=false;
+  ab.style.display='none';
+
+  if(m==='kill'){
+    lb.textContent='💀  INITIATE KILL SEQUENCE';
+    lb.className='abtn kill-style';
+    $('ptitle').textContent='KILL // AUTO-DESTROY MODULE';
+    $('pstatus').textContent='ARMED';
+  } else {
+    lb.textContent='▶  INITIATE HACK SEQUENCE';
+    lb.className='abtn';
+    $('ptitle').textContent=MOD[m].title;
+    $('pstatus').textContent='READY';
+  }
+
+  $('terminal').innerHTML='';
+  addLine('root@hydra69:~$ ./hydra69 --module='+m+' --stealth --tor','bright');
+  addLine('[HYDRA69] Module loaded: '+m.toUpperCase(),'dim');
+  if(m==='kill'){
+    addLine('[KILL]  Auto destroy mode — runs until you press ABORT','red');
+  } else {
+    addLine('[HYDRA69] Ready. Press INITIATE to begin.','dim');
+  }
+  addLine('','dim');
+}
+
+/* START DISPATCH */
+function startHack(){
+  if(!mode||running)return;
+  if(mode==='kill'){startKill();return;}
+  runSeq();
+}
+
+/* HACK SEQUENCE */
+async function runSeq(){
+  running=true;
+  const lb=$('launch-btn');
+  lb.disabled=true; lb.textContent='⣿  RUNNING...';
+  $('pstatus').textContent='ATTACKING';
+  $('terminal').innerHTML='';
+
+  const seq=MOD[mode].seq;
+  const mid=Math.floor(seq.length*.5);
+
+  for(let i=0;i<seq.length;i++){
+    if(i===mid){addLine('','dim');addProgressBar();addLine('','dim');await animProgress();}
+    await sleep(160+Math.random()*240);
+    addLine(seq[i].t,seq[i].c);
+    if(Math.random()<.22&&seq[i].c==='dim'){await sleep(55);addLine(randomHex(),'dim');}
+  }
+
+  await sleep(350);
+  addLine('','dim');
+  addLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━','bright');
+  addLine('[HYDRA69] Session ID: '+Math.random().toString(16).slice(2,10).toUpperCase(),'cyan');
+  addLine('[HYDRA69] Exfiltrated: '+(Math.random()*900+100).toFixed(1)+' MB','cyan');
+  addLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━','bright');
+
+  ss++;st++;sd+=Math.floor(Math.random()*900+100);
+  $('st-s').textContent=ss; $('st-t').textContent=st; $('st-d').textContent=sd+' MB';
+
+  $('pstatus').textContent='COMPLETE';
+  running=false;
+  lb.disabled=false; lb.textContent='↺  RUN AGAIN';
+}
+
+/* KILL MODE */
+function startKill(){
+  running=true; killStopped=false;
+  $('launch-btn').style.display='none';
+  $('abort-btn').style.display='inline-block';
+  $('pstatus').textContent='KILLING...';
+  $('terminal').innerHTML='';
+
+  addLine('root@hydra69:~$ ./hydra69 --module=kill --auto --no-mercy --infinite','red');
+  addLine('[KILL] ████ SCORCHED-EARTH ACTIVATED ████','red');
+  addLine('[KILL] Running continuously — press ABORT to stop','orange');
+  addLine('','dim');
+
+  const pool=[...KILL_CMDS].sort(()=>Math.random()-.5);
+  let idx=0;
+
+  function fire(){
+    if(killStopped)return;
+    const cmd=pool[idx%pool.length]; idx++;
+    addLine(cmd.t,cmd.c);
+    if(Math.random()<.3)setTimeout(()=>{if(!killStopped)addLine(randomHex(),'dim');},75);
+    killTimer=setTimeout(fire,200+Math.random()*500);
+  }
+  fire();
+}
+
+function abortKill(){
+  killStopped=true; clearTimeout(killTimer); running=false;
+  addLine('','dim');
+  addLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━','red');
+  addLine('[ABORT] *** KILL SEQUENCE TERMINATED BY OPERATOR ***','red');
+  addLine('[ABORT] Cleaning stray processes...','orange');
+  addLine('[ABORT] System state: UNKNOWN — reboot advised','orange');
+  addLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━','red');
+  $('abort-btn').style.display='none';
+  const lb=$('launch-btn');
+  lb.style.display='inline-block'; lb.disabled=false;
+  lb.textContent='💀  RUN KILL AGAIN';
+  lb.className='abtn kill-style';
+  $('pstatus').textContent='ABORTED';
+}
+
+/* COMMAND INPUT */
+const RESPONSES=[
+  v=>'bash: '+v+': command not found',
+  ()=>'Permission denied (publickey,gssapi)',
+  ()=>'Segmentation fault (core dumped)',
+  ()=>'Connection refused: port 22',
+  ()=>'[OK] Payload executed successfully.',
+  ()=>'Access granted. Privilege level: ROOT',
+  ()=>'Packet injection OK — 4096 bytes sent.',
+  ()=>'Buffer overflow at 0x7ffe2a40',
+  v=>'Kernel module inserted: '+v,
+  ()=>'SELinux policy bypassed...',
+  ()=>'Reverse shell → 10.0.0.'+Math.floor(Math.random()*254+1)+':4444',
+  ()=>'SSH tunnel active. RTT: '+Math.floor(Math.random()*30+4)+'ms',
+  ()=>'Hash cracked: '+Math.random().toString(36).slice(2,10),
+  ()=>'Proxychains: '+Math.floor(Math.random()*8+3)+' nodes active',
+  ()=>'[WARN] IDS signature matched — rotating exit node...',
+];
+
+$('cmd-input').addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  const val=this.value; this.value='';
+
+  // Remove welcome screen if still showing
+  const wc=$('terminal').querySelector('.welcome');
+  if(wc)wc.remove();
+
+  // Show button area if not already visible
+  if($('btn-area').style.display==='none'||$('btn-area').style.display===''){
+    // don't show buttons if no mode selected — that's fine
+  }
+
+  // Echo the command
+  addLine('root@hydra69:~$ '+val,'bright');
+
+  // Fake response
+  if(val.trim()){
+    const fn=RESPONSES[Math.floor(Math.random()*RESPONSES.length)];
+    setTimeout(()=>addLine(fn(val.trim()),'dim'),65);
+  }
+});
+</script>
+</body>
+</html>
